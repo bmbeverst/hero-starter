@@ -176,11 +176,75 @@ var moves = {
   // This hero will try really hard not to die.
   coward : function(gameData, helpers) {
     return helpers.findNearestHealthWell(gameData);
-  }
+  },
+  
+  // bmbeverst
+  // My hero
+  bmbeverst : function(gameData, helpers) {
+    var myHero = gameData.activeHero;
+    var board = gameData.board;
+    var debug = true
+    
+    //Find nearest ally
+    var nearestTeamMemberStats = helpers.findNearestObjectDirectionAndDistance(board, myHero, function(friendTile) {
+        return friendTile.type === 'Hero' && friendTile.team == myHero.team
+    });
+    //Find nearest weaker enemy
+    var nearestWeakerEnemy = helpers.findNearestObjectDirectionAndDistance(board, myHero, function(enemyTile) {
+      return enemyTile.type === 'Hero' && enemyTile.team !== myHero.team && enemyTile.health < myHero.health;
+    });
+    
+    //Find nearest  enemy
+    var nearestEnemy = helpers.findNearestObjectDirectionAndDistance(board, myHero, function(enemyTile) {
+      return enemyTile.type === 'Hero' && enemyTile.team !== myHero.team && enemyTile.health <= myHero.health;
+    });
+    
+    //Get stats on the nearest health well
+    var healthWellStats = helpers.findNearestObjectDirectionAndDistance(board, myHero, function(boardTile) {
+      if (boardTile.type === 'HealthWell') {
+        return true;
+      }
+    });
+
+    if (myHero.health < 40) {
+      if (debug) console.log('Low');
+      if (nearestTeamMemberStats.distance < healthWellStats.distance) {
+        return nearestTeamMemberStats.direction
+      } else {
+        return healthWellStats.direction
+      }
+    } else if (myHero.health < 100) {
+      if (nearestTeamMemberStats.distance <= 2 || healthWellStats.distance <= 2) {
+       if (nearestTeamMemberStats.distance <= healthWellStats.distance) {
+          if (debug) console.log('Team');
+          return nearestTeamMemberStats.direction
+        } else {
+          if (debug) console.log('Heal');
+          return healthWellStats.direction
+        }
+      }
+    }
+    //nearestWeakerEnemy is false when there is no weaker enemy.
+    if (!nearestWeakerEnemy) {
+      var move = helpers.findNearestNonTeamDiamondMine(gameData);
+      if (move == undefined) {
+        if (debug) console.log('Attack');
+        return nearestEnemy.direction
+      } else {
+        console.log('Mine');
+        return move
+      }
+    } else {
+       if (debug) console.log('Weak');
+      return nearestWeakerEnemy.direction
+    }
+    
+    return nearestEnemy.direction
+    } //End Function
  };
 
 //  Set our heros strategy
-var  move =  moves.aggressor;
+var  move =  moves.bmbeverst;
 
 // Export the move function here
 module.exports = move;
